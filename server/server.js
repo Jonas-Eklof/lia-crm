@@ -1,8 +1,14 @@
 import express from "express";
 import cors from "cors";
 import pg from "pg";
-import path from "path";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url"; // Add this import
+
+// Fix __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 dotenv.config();
 const isProduction = process.env.NODE_ENV === "production";
 
