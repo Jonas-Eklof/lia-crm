@@ -1,6 +1,9 @@
 import express from "express";
 import cors from "cors";
 import pg from "pg";
+import dotenv from "dotenv";
+dotenv.config();
+const isProduction = process.env.NODE_ENV === "production";
 
 const { Pool } = pg;
 const app = express();
@@ -8,13 +11,15 @@ const app = express();
 // PostgreSQL connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  // ssl: { rejectUnauthorized: false },
 });
 
 // Middleware
 app.use(
   cors({
-    origin: ["https://your-netlify-app.netlify.app", "http://localhost:3000"],
+    origin: isProduction
+      ? ["https://your-frontend-domain.com"]
+      : ["http://localhost:5173"],
   })
 );
 app.use(express.json());
@@ -33,6 +38,7 @@ async function initializeDatabase() {
         response TEXT CHECK(response IN ('N/A', 'Ja', 'Ja - Godkänd', 'Ja - Nekad', 'Nej')),
         nextStep TEXT,
         status TEXT CHECK(status IN ('Aktiv', 'Inaktiv'))
+    )
     `);
 
     const { rows } = await pool.query(
@@ -147,6 +153,10 @@ function setupRoutes() {
 
 initializeDatabase();
 setupRoutes();
+
+if (isProduction) {
+  app.use(express.static(path.join(__dirname, "public")));
+}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

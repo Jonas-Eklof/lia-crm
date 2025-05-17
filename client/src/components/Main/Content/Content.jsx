@@ -8,7 +8,7 @@ import {
   addCompany,
   updateCompany,
   deleteCompany,
-} from "../../../api";
+} from "../../../../../server/api";
 
 export default function Content() {
   const [companyToEdit, setCompanyToEdit] = useState(null);
