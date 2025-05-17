@@ -1,4 +1,6 @@
-const API_URL = "http://localhost:3000/api/companies";
+const API_URL = import.meta.env.PROD
+  ? "https://lia-crm-backend.onrender.com/api/companies"
+  : "http://localhost:3000/api/companies";
 
 // Gemensam fetch-funktion för att hantera repeterande logik
 async function fetchData(url, options = {}) {
