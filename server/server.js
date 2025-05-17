@@ -1,177 +1,142 @@
 import express from "express";
 import cors from "cors";
-import Database from "better-sqlite3";
+import pg from "pg";
 
+const { Pool } = pg;
 const app = express();
-const db = new Database("companies.db", { verbose: console.log });
+
+// PostgreSQL connection
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+});
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: ["https://your-netlify-app.netlify.app", "http://localhost:3000"],
+  })
+);
 app.use(express.json());
 
-function initializeDatabase() {
-  db.prepare(
-    `
-    CREATE TABLE IF NOT EXISTS companies (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL CHECK(length(name) > 0),
-      contact TEXT NOT NULL,
-      email TEXT NOT NULL UNIQUE CHECK(email LIKE '%@%.%'),
-      phone TEXT,
-      time TEXT,
-      how TEXT CHECK(how IN ('E-mail', 'Tele', 'E-mail/Tele')),
-      response TEXT CHECK(response IN ('N/A', 'Ja', 'Ja - Godkänd', 'Ja - Nekad', 'Nej')),
-      nextStep TEXT,
-      status TEXT CHECK(status IN ('Aktiv', 'Inaktiv')))
-    `
-  ).run();
+async function initializeDatabase() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS companies (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL CHECK(length(name) > 0),
+        contact TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE CHECK(email LIKE '%@%.%'),
+        phone TEXT,
+        time TEXT,
+        how TEXT CHECK(how IN ('E-mail', 'Tele', 'E-mail/Tele')),
+        response TEXT CHECK(response IN ('N/A', 'Ja', 'Ja - Godkänd', 'Ja - Nekad', 'Nej')),
+        nextStep TEXT,
+        status TEXT CHECK(status IN ('Aktiv', 'Inaktiv'))
+    `);
 
-  // Exempeldata om tabellen är tom - för utveckling
-  const rowCount = db
-    .prepare(`SELECT COUNT(*) as count FROM companies`)
-    .get().count;
-  if (rowCount === 0) {
-    const insert = db.prepare(
-      "INSERT INTO companies (name, contact, email, phone, time, how, response, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    const { rows } = await pool.query(
+      "SELECT COUNT(*) as count FROM companies"
     );
-    insert.run(
-      "Exempel AB",
-      "Anna Andersson",
-      "anna@exempel.se",
-      "070-1234567",
-      new Date().toISOString().split("T")[0],
-      "E-mail",
-      "Ja",
-      "Aktiv"
-    );
-    insert.run(
-      "Testföretag",
-      "Bo Bengtsson",
-      "bo@test.se",
-      "072-9876543",
-      new Date().toISOString().split("T")[0],
-      "Tele",
-      "Nej",
-      "Inaktiv"
-    );
+    if (rows[0].count === "0") {
+      await pool.query(
+        `
+        INSERT INTO companies (name, contact, email, phone, time, how, response, status)
+        VALUES 
+          ('Exempel AB', 'Anna Andersson', 'anna@exempel.se', '070-1234567', $1, 'E-mail', 'Ja', 'Aktiv'),
+          ('Testföretag', 'Bo Bengtsson', 'bo@test.se', '072-9876543', $1, 'Tele', 'Nej', 'Inaktiv')
+      `,
+        [new Date().toISOString().split("T")[0]]
+      );
+    }
+  } catch (error) {
+    console.error("Database initialization error:", error);
   }
 }
 
 function setupRoutes() {
-  // GET /api/companies - Hämtar alla företag
-  app.get("/api/companies", (req, res) => {
+  // GET /api/companies
+  app.get("/api/companies", async (req, res) => {
     try {
-      const companies = db.prepare("SELECT * FROM companies").all();
-      res.json(companies);
+      const { rows } = await pool.query("SELECT * FROM companies");
+      res.json(rows);
     } catch (error) {
       console.error("Database error:", error);
       res.status(500).json({ error: "Kunde inte hämta företag" });
     }
   });
 
-  // POST /api/companies - Skapa ett nytt företag
-  app.post("/api/companies", (req, res) => {
+  // POST /api/companies
+  app.post("/api/companies", async (req, res) => {
     try {
-      const {
-        name,
-        contact,
-        email,
-        phone,
-        time,
-        how,
-        response,
-        nextStep,
-        status,
-      } = req.body;
-
-      const stmt = db.prepare(`
-        INSERT INTO companies (name, contact, email, phone, time, how, response, nextStep, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      const result = stmt.run(
-        name,
-        contact,
-        email,
-        phone,
-        time,
-        how,
-        response,
-        nextStep,
-        status
+      const { rows } = await pool.query(
+        `INSERT INTO companies 
+        (name, contact, email, phone, time, how, response, nextStep, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING *`,
+        [
+          req.body.name,
+          req.body.contact,
+          req.body.email,
+          req.body.phone,
+          req.body.time,
+          req.body.how,
+          req.body.response,
+          req.body.nextStep,
+          req.body.status,
+        ]
       );
-
-      const newCompany = db
-        .prepare("SELECT * FROM companies WHERE id = ?")
-        .get(result.lastInsertRowid);
-      res.status(201).json(newCompany);
+      res.status(201).json(rows[0]);
     } catch (error) {
       console.error("Database error:", error);
       res.status(500).json({ error: "Kunde inte skapa nytt företag" });
     }
   });
 
-  // PUT /api/companies/:id - Uppdatera företag
-  app.put("/api/companies/:id", (req, res) => {
+  // PUT /api/companies/:id
+  app.put("/api/companies/:id", async (req, res) => {
     try {
-      const { id } = req.params;
-      const {
-        name,
-        contact,
-        email,
-        phone,
-        time,
-        how,
-        response,
-        nextStep,
-        status,
-      } = req.body;
+      const { rows, rowCount } = await pool.query(
+        `UPDATE companies SET
+        name = $1, contact = $2, email = $3, phone = $4, time = $5,
+        how = $6, response = $7, nextStep = $8, status = $9
+        WHERE id = $10
+        RETURNING *`,
+        [
+          req.body.name,
+          req.body.contact,
+          req.body.email,
+          req.body.phone,
+          req.body.time,
+          req.body.how,
+          req.body.response,
+          req.body.nextStep,
+          req.body.status,
+          req.params.id,
+        ]
+      );
 
-      const stmt = db.prepare(`
-        UPDATE companies 
-        SET name = ?, contact = ?, email = ?, phone = ?, time = ?, how = ?, response = ?, nextStep = ?, status = ?
-        WHERE id = ?
-      `);
-
-      const changes = stmt.run(
-        name,
-        contact,
-        email,
-        phone,
-        time,
-        how,
-        response,
-        nextStep,
-        status,
-        id
-      ).changes;
-
-      if (changes === 0) {
+      if (rowCount === 0) {
         return res.status(404).json({ error: "Företag hittades inte" });
       }
-
-      const updatedCompany = db
-        .prepare("SELECT * FROM companies WHERE id = ?")
-        .get(id);
-      res.json(updatedCompany);
+      res.json(rows[0]);
     } catch (error) {
       console.error("Database error:", error);
       res.status(500).json({ error: "Kunde inte uppdatera företag" });
     }
   });
 
-  // DELETE /api/companies/:id - Radera ett företag
-  app.delete("/api/companies/:id", (req, res) => {
+  // DELETE /api/companies/:id
+  app.delete("/api/companies/:id", async (req, res) => {
     try {
-      const { id } = req.params;
-      const changes = db
-        .prepare("DELETE FROM companies WHERE id = ?")
-        .run(id).changes;
+      const { rowCount } = await pool.query(
+        "DELETE FROM companies WHERE id = $1",
+        [req.params.id]
+      );
 
-      if (changes === 0) {
+      if (rowCount === 0) {
         return res.status(404).json({ error: "Företaget hittades inte" });
       }
-
       res.json({ success: true });
     } catch (error) {
       console.error("Database error:", error);
