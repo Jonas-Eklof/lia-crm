@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import pg from "pg";
+import path from "path";
 import dotenv from "dotenv";
 dotenv.config();
 const isProduction = process.env.NODE_ENV === "production";
@@ -11,7 +12,7 @@ const app = express();
 // PostgreSQL connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // ssl: { rejectUnauthorized: false },
+  ssl: isProduction ? { rejectUnauthorized: false } : false,
 });
 
 // Middleware
