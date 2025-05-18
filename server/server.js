@@ -54,7 +54,7 @@ async function initializeDatabase() {
         time TEXT,
         how TEXT CHECK(how IN ('E-mail', 'Tele', 'E-mail/Tele')),
         response TEXT CHECK(response IN ('N/A', 'Ja', 'Ja - Godkänd', 'Ja - Nekad', 'Nej')),
-        nextStep TEXT,
+        nextstep TEXT,
         status TEXT CHECK(status IN ('Aktiv', 'Inaktiv'))
     )
     `);
@@ -95,7 +95,7 @@ function setupRoutes() {
     try {
       const { rows } = await pool.query(
         `INSERT INTO companies 
-        (name, contact, email, phone, time, how, response, nextStep, status)
+        (name, contact, email, phone, time, how, response, nextstep, status)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *`,
         [
@@ -106,7 +106,7 @@ function setupRoutes() {
           req.body.time,
           req.body.how,
           req.body.response,
-          req.body.nextStep,
+          req.body.nextstep,
           req.body.status,
         ]
       );
@@ -124,7 +124,7 @@ function setupRoutes() {
       const { rows, rowCount } = await pool.query(
         `UPDATE companies SET
         name = $1, contact = $2, email = $3, phone = $4, time = $5,
-        how = $6, response = $7, nextStep = $8, status = $9
+        how = $6, response = $7, nextstep = $8, status = $9
         WHERE id = $10
         RETURNING *`,
         [
@@ -135,7 +135,7 @@ function setupRoutes() {
           req.body.time,
           req.body.how,
           req.body.response,
-          req.body.nextStep || null,
+          req.body.nextstep || null,
           req.body.status,
           req.params.id,
         ]

@@ -57,7 +57,7 @@ function CompanyRow({ company, onEdit, onDelete }) {
         />
       </div>
       <div className="md:col-span-1 text-sm text-gray-600">
-        {company.nextStep}
+        {company.nextstep}
       </div>
       <div className="md:col-span-1">
         <StatusBadge

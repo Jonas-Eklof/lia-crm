@@ -16,7 +16,7 @@ export default function AddCompany({
     time: new Date().toISOString().split("T")[0],
     how: "E-mail",
     response: "N/A",
-    nextStep: "",
+    nextstep: "",
     status: "Aktiv",
   };
 
@@ -27,7 +27,7 @@ export default function AddCompany({
       setFormData({
         ...initialFormState,
         ...companyToEdit,
-        nextStep: companyToEdit.nextStep || "",
+        nextstep: companyToEdit.nextstep || "",
         time: companyToEdit.time || initialFormState.time,
       });
     } else {
@@ -190,8 +190,8 @@ export default function AddCompany({
               </label>
               <input
                 type="text"
-                name="nextStep"
-                value={formData.nextStep || ""}
+                name="nextstep"
+                value={formData.nextstep || ""}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />

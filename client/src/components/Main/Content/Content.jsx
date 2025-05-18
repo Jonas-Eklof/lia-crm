@@ -65,7 +65,7 @@ export default function Content() {
     try {
       const payload = {
         ...updatedCompany,
-        nextStep: updatedCompany.nextStep || null, // Handle empty values
+        nextstep: updatedCompany.nextstep || null, // Handle empty values
       };
 
       const updated = await updateCompany(updatedCompany.id, updatedCompany);
