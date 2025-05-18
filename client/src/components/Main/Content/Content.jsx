@@ -63,6 +63,11 @@ export default function Content() {
 
   const handleEditCompany = async (updatedCompany) => {
     try {
+      const payload = {
+        ...updatedCompany,
+        nextStep: updatedCompany.nextStep || null, // Handle empty values
+      };
+
       const updated = await updateCompany(updatedCompany.id, updatedCompany);
       setCompanies(
         companies.map((company) =>

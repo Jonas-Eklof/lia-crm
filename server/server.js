@@ -119,6 +119,7 @@ function setupRoutes() {
 
   // PUT /api/companies/:id
   app.put("/api/companies/:id", async (req, res) => {
+    console.log("Incoming update data:", req.body);
     try {
       const { rows, rowCount } = await pool.query(
         `UPDATE companies SET
@@ -134,11 +135,13 @@ function setupRoutes() {
           req.body.time,
           req.body.how,
           req.body.response,
-          req.body.nextStep,
+          req.body.nextStep || null,
           req.body.status,
           req.params.id,
         ]
       );
+
+      console.log("Updated record:", rows[0]);
 
       if (rowCount === 0) {
         return res.status(404).json({ error: "Företag hittades inte" });

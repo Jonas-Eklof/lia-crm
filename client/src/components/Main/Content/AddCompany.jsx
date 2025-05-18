@@ -27,6 +27,7 @@ export default function AddCompany({
       setFormData({
         ...initialFormState,
         ...companyToEdit,
+        nextStep: companyToEdit.nextStep || "",
         time: companyToEdit.time || initialFormState.time,
       });
     } else {
