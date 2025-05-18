@@ -24,7 +24,8 @@ const pool = new Pool({
 // Middleware
 const allowedOrigins = [
   "https://lia-crm.netlify.app",
-  "http://localhost:3000", // for development
+  "http://localhost:3000",
+  "https://lia-crm-backend.onrender.com",
 ];
 
 app.use(
