@@ -22,11 +22,21 @@ const pool = new Pool({
 });
 
 // Middleware
+const allowedOrigins = [
+  "https://lia-crm.netlify.app",
+  "http://localhost:3000", // for development
+];
+
 app.use(
   cors({
-    origin: isProduction
-      ? ["https://your-frontend-domain.com"]
-      : ["http://localhost:5173"],
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
   })
 );
 app.use(express.json());
